@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Member Details - Church Registry System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .detail-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+        .detail-label {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        .detail-value {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        .section-title {
+            font-weight: 600;
+            margin: 20px 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+        .sacrament-badge {
+            background: #f8f9fa;
+            border-left: 3px solid #667eea;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+        .print-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand text-white" href="/dashboard/">
+                <i class="fas fa-church me-2"></i>Church Registry System
+            </a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <button class="btn btn-light btn-sm" onclick="logout()">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-12">
+                <a href="/members/" class="btn btn-secondary mb-3">
+                    <i class="fas fa-arrow-left"></i> Back to Members
+                </a>
+                <button onclick="printPage()" class="btn print-btn mb-3 float-end">
+                    <i class="fas fa-print"></i> Print Member Record
+                </button>
+            </div>
+        </div>
+
+        <div id="memberDetails"></div>
+
+        <div class="row mt-3">
+            <div class="col-md-6">
+                <div class="detail-card">
+                    <h5 class="section-title">Sacraments</h5>
+                    <div id="sacramentsList">Loading...</div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="detail-card">
+                    <h5 class="section-title">Pledges & Payments</h5>
+                    <div id="pledgesList">Loading...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const memberId = window.location.pathname.split('/')[2];
+        
+        async function loadMemberDetails() {
+            try {
+                const response = await fetch(`/api/members/${memberId}/`);
+                if (response.ok) {
+                    const member = await response.json();
+                    renderMemberDetails(member);
+                    loadMemberSacraments();
+                    loadMemberPledges();
+                } else {
+                    window.location.href = '/members/';
+                }
+            } catch (error) {
+                console.error('Error loading member:', error);
+            }
+        }
+        
+        function renderMemberDetails(member) {
+            const html = `
+                <div class="detail-card">
+                    <h3>${member.full_name}</h3>
+                    <hr>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="detail-label">Birth Date</div>
+                            <div class="detail-value">${member.birth_date}</div>
+                            
+                            <div class="detail-label">Gender</div>
+                            <div class="detail-value">${member.gender === 'M' ? 'Male' : member.gender === 'F' ? 'Female' : 'Other'}</div>
+                            
+                            <div class="detail-label">Civil Status</div>
+                            <div class="detail-value">${member.civil_status}</div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="detail-label">Email</div>
+                            <div class="detail-value">${member.email}</div>
+                            
+                            <div class="detail-label">Phone</div>
+                            <div class="detail-value">${member.phone}</div>
+                            
+                            <div class="detail-label">Address</div>
+                            <div class="detail-value">${member.address}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('memberDetails').innerHTML = html;
+        }
+        
+        async function loadMemberSacraments() {
+            try {
+                const response = await fetch(`/api/member/${memberId}/sacraments/`);
+                if (response.ok) {
+                    const sacraments = await response.json();
+                    if (sacraments.length === 0) {
+                        document.getElementById('sacramentsList').innerHTML = '<p>No sacraments recorded</p>';
+                        return;
+                    }
+                    
+                    const html = sacraments.map(sac => `
+                        <div class="sacrament-badge">
+                            <strong>${sac.sacrament_type}</strong><br>
+                            Date: ${sac.date_received}<br>
+                            Officiant: ${sac.officiant}<br>
+                            ${sac.godfather ? `Godfather: ${sac.godfather}<br>` : ''}
+                            ${sac.godmother ? `Godmother: ${sac.godmother}<br>` : ''}
+                            ${sac.confirmation_name ? `Confirmation Name: ${sac.confirmation_name}<br>` : ''}
+                            ${sac.spouse_name ? `Spouse: ${sac.spouse_name}<br>` : ''}
+                        </div>
+                    `).join('');
+                    document.getElementById('sacramentsList').innerHTML = html;
+                }
+            } catch (error) {
+                console.error('Error loading sacraments:', error);
+            }
+        }
+        
+        async function loadMemberPledges() {
+            try {
+                const response = await fetch(`/api/member/${memberId}/pledges/`);
+                if (response.ok) {
+                    const pledges = await response.json();
+                    if (pledges.length === 0) {
+                        document.getElementById('pledgesList').innerHTML = '<p>No pledges recorded</p>';
+                        return;
+                    }
+                    
+                    const html = pledges.map(pledge => `
+                        <div class="sacrament-badge">
+                            <strong>Pledge: ₱${pledge.amount_promised}</strong><br>
+                            Due Date: ${pledge.due_date}<br>
+                            Status: <span class="badge ${pledge.status === 'Settled' ? 'bg-success' : 'bg-warning'}">${pledge.status}</span><br>
+                            Balance: ₱${pledge.balance}<br>
+                            Total Paid: ₱${pledge.total_paid || 0}
+                        </div>
+                    `).join('');
+                    document.getElementById('pledgesList').innerHTML = html;
+                }
+            } catch (error) {
+                console.error('Error loading pledges:', error);
+            }
+        }
+        
+        function printPage() {
+            window.print();
+        }
+        
+        async function logout() {
+            await fetch('/api/logout/', { method: 'POST' });
+            window.location.href = '/login/';
+        }
+        
+        loadMemberDetails();
+    </script>
+</body>
+</html>
